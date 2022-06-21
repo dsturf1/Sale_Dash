@@ -1,5 +1,5 @@
 from flask import Flask, redirect, request, jsonify, session, render_template_string,url_for
-from flask_login import LoginManager,UserMixin,login_user, logout_user
+from flask_login import LoginManager,UserMixin,login_user, logout_user, login_required
 import requests
 from requests.auth import HTTPBasicAuth
 import os
@@ -154,13 +154,26 @@ def home():
         {% endif %}
         {% endblock %}""")
 
+@app.route("/dswork", methods=('GET', 'POST'))
+@login_required
+def dswork():
+    # html_out = work_df2.iloc[:1,:].to_html(float_format='{:20,.1f}'.format,classes='table table-stripped table-hover',table_id='dswork')
 
-if __name__ == '__main__':
-    app.run(debug=True)
+    # print({'data': work_df2.to_dict('records')})
+
+    return render_template_string("""
+        {% extends "main.html" %}
+        {% block content %}
+        {% if current_user.is_authenticated %}
+        Click <em>Data!!!</em> to access your photos.
+        {% else %}
+        Click <em>login in / sign up<em> to access this site.
+        {% endif %}
+        {% endblock %}""")
 
 # run the app.
 if __name__ == "__main__":
     # Setting debug to True enables debug output. This line should be
     # removed before deploying a production app.
     app.debug = True
-    app.run()
+    app.run('localhost')
