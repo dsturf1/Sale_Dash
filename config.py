@@ -11,12 +11,12 @@
 "Central configuration"
 import os
 
-AWS_DEFAULT_REGION = 'us-east-1'
-AWS_COGNITO_DOMAIN= 'https://dsturf-login-test.auth.us-east-1.amazoncognito.com'
-AWS_COGNITO_USER_POOL_ID = 'us-east-1_s7z41WH1Y'
-AWS_COGNITO_USER_POOL_CLIENT_ID = '5nclqdj4j2s0grki0ad1f5ef2'
-AWS_COGNITO_USER_POOL_CLIENT_SECRET = '1lmqcl8945mrpvrmmk5a6b5cpt3ti0nghp3lusgmp9tareto9lks'
-AWS_COGNITO_REDIRECT_URL = 'https://dsturf.net/callback'
-AWS_COGNITO_LOGOUT_URL = 'https://dsturf.net/logout'
+AWS_DEFAULT_REGION = os.environ['AWS_DEFAULT_REGION']
+AWS_COGNITO_DOMAIN = os.environ['AWS_COGNITO_DOMAIN']
+AWS_COGNITO_USER_POOL_ID = os.environ['AWS_COGNITO_USER_POOL_ID']
+AWS_COGNITO_USER_POOL_CLIENT_ID = os.environ['AWS_COGNITO_USER_POOL_CLIENT_ID']
+AWS_COGNITO_USER_POOL_CLIENT_SECRET = os.environ['AWS_COGNITO_USER_POOL_CLIENT_SECRET']
+AWS_COGNITO_REDIRECT_URL = os.environ['AWS_COGNITO_REDIRECT_URL']
+AWS_COGNITO_LOGOUT_URL = os.environ['AWS_COGNITO_LOGOUT_URL']
 
-FLASK_SECRET = 'James is King'
+FLASK_SECRET = os.environ['FLASK_SECRET']

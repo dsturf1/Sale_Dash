@@ -146,12 +146,13 @@ def home():
     return render_template_string("""
         {% extends "main.html" %}
         {% block content %}
+        {{env1}}
         {% if current_user.is_authenticated %}
         Click <em>my photos</em> to access your photos.
         {% else %}
         Click <em>login in / sign up<em> to access this site.
         {% endif %}
-        {% endblock %}""")
+        {% endblock %}""", env1 = config.FLASK_SECRET)
 
 @application.route("/dswork", methods=('GET', 'POST'))
 @login_required
