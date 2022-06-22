@@ -15,9 +15,6 @@ login_manager.init_app(application)
 application.secret_key = config.FLASK_SECRET
 
 
-
-
-
 JWKS_URL = ("https://cognito-idp.%s.amazonaws.com/%s/.well-known/jwks.json"
             % (config.AWS_DEFAULT_REGION, config.AWS_COGNITO_USER_POOL_ID))
 JWKS = requests.get(JWKS_URL).json()["keys"]
