@@ -8,11 +8,11 @@ from jose import jwt
 
 import config
 
-app = Flask(__name__)
+application = Flask(__name__)
 login_manager = LoginManager()
-login_manager.init_app(app)
+login_manager.init_app(application)
 
-app.secret_key = config.FLASK_SECRET
+application.secret_key = config.FLASK_SECRET
 
 
 
@@ -22,7 +22,6 @@ JWKS_URL = ("https://cognito-idp.%s.amazonaws.com/%s/.well-known/jwks.json"
             % (config.AWS_DEFAULT_REGION, config.AWS_COGNITO_USER_POOL_ID))
 JWKS = requests.get(JWKS_URL).json()["keys"]
 
-print('JWKS:', JWKS)
 
 
 class User(UserMixin):
@@ -46,7 +45,7 @@ def user_loader(session_token):
     user.groups = session['groups']
     return user
 
-@app.route("/login")
+@application.route("/login")
 def login():
     """Login route"""
     # http://docs.aws.amazon.com/cognito/latest/developerguide/login-endpoint.html
@@ -61,7 +60,7 @@ def login():
 
     return redirect(cognito_login)
 
-@app.route("/logout")
+@application.route("/logout")
 def logout():
     """Logout route"""
     # http://docs.aws.amazon.com/cognito/latest/developerguide/logout-endpoint.html
@@ -75,7 +74,7 @@ def logout():
                       config.AWS_COGNITO_LOGOUT_URL, session['csrf_state'],config.AWS_COGNITO_REDIRECT_URL))
     return redirect(cognito_logout)
 
-@app.route("/callback")
+@application.route("/callback")
 def callback():
     """Exchange the 'code' for Cognito tokens"""
     #http://docs.aws.amazon.com/cognito/latest/developerguide/token-endpoint.html
@@ -120,7 +119,7 @@ def callback():
             <p>Something went wrong</p>
         {% endblock %}""")
 
-@app.errorhandler(401)
+@application.errorhandler(401)
 def unauthorized(exception):
     "Unauthorized access route"
     return render_template_string("""
@@ -141,7 +140,7 @@ def verify(token, access_token=None):
     return id_token
 
 
-@app.route("/")
+@application.route("/")
 def home():
     """Homepage route"""
     return render_template_string("""
@@ -154,7 +153,7 @@ def home():
         {% endif %}
         {% endblock %}""")
 
-@app.route("/dswork", methods=('GET', 'POST'))
+@application.route("/dswork", methods=('GET', 'POST'))
 @login_required
 def dswork():
     # html_out = work_df2.iloc[:1,:].to_html(float_format='{:20,.1f}'.format,classes='table table-stripped table-hover',table_id='dswork')
@@ -171,9 +170,9 @@ def dswork():
         {% endif %}
         {% endblock %}""")
 
-# run the app.
+# run the application.
 if __name__ == "__main__":
     # Setting debug to True enables debug output. This line should be
-    # removed before deploying a production app.
-    app.debug = True
-    app.run('localhost')
+    # removed before deploying a production application.
+    application.debug = True
+    application.run('localhost')
