@@ -1,12 +1,24 @@
 from flask import Flask, redirect, request, jsonify, session, render_template_string,url_for
-from flask_login import LoginManager,UserMixin,login_user, logout_user, login_required
+from flask_login import LoginManager,UserMixin,login_user, logout_user, login_required, current_user
 import requests
 from requests.auth import HTTPBasicAuth
 import os
 from datetime import datetime
 from jose import jwt
+import pandas as pd
 
 import config
+
+import pickle
+import boto3
+import boto3.session
+
+# cred = boto3.Session().get_credentials()
+# ACCESS_KEY = cred.access_key
+# SECRET_KEY = cred.secret_key
+# SESSION_TOKEN = cred.token  ## optional
+
+# # print(cred.access_key)
 
 application = Flask(__name__)
 login_manager = LoginManager()
@@ -139,34 +151,61 @@ def verify(token, access_token=None):
 
 @application.route("/")
 def home():
+
+    _access_key = "N/A"
+
+    if current_user.is_authenticated:
+        cred = boto3.Session().get_credentials()
+
+        session['iamaccess'] = cred.access_key
+        session['iamsecret'] = cred.secret_key
+        session['iamtoken'] = cred.token
+
+        _access_key = cred.access_key
+
+        _access_key = boto3.client('sts').get_caller_identity().get('Arn')
+
     """Homepage route"""
     return render_template_string("""
         {% extends "main.html" %}
         {% block content %}
-        {{env1}}
         {% if current_user.is_authenticated %}
-        Click <em>my photos</em> to access your photos.
+        Your access key is {{env1}}
         {% else %}
         Click <em>login in / sign up<em> to access this site.
         {% endif %}
-        {% endblock %}""", env1 = config.FLASK_SECRET)
+        {% endblock %}""", env1 = _access_key)
 
 @application.route("/dswork", methods=('GET', 'POST'))
 @login_required
 def dswork():
-    # html_out = work_df2.iloc[:1,:].to_html(float_format='{:20,.1f}'.format,classes='table table-stripped table-hover',table_id='dswork')
+    s3client = boto3.client('s3', 
+                            aws_access_key_id = session['iamaccess'], 
+                            aws_secret_access_key = session['iamsecret'], 
+                            aws_session_token = session['iamtoken']
+                        )
 
-    # print({'data': work_df2.to_dict('records')})
+    response = s3client.get_object(Bucket='df-fin-data', Key='pickle/work.pickle')
+
+    body = response['Body'].read()
+    work_df = pickle.loads(body)
+
+
+    sum_df1 = work_df.groupby(['조직','거래처명','골프장','연도']).agg({'금액(백만원)':sum})
+    col = pd.MultiIndex.from_tuples([('금액(백만원)', 'Total')])
+    sum_df1.columns = col
+    sum_df = work_df.groupby(['조직','거래처명','골프장','연도','월']).agg({'금액(백만원)':sum, '일자':'nunique'}).reindex()
+    sum_df = sum_df.pivot_table(['금액(백만원)'], ['조직','거래처명','골프장','연도'], '월').fillna(0)
+
+    sum_df = pd.concat([sum_df, sum_df1] ,axis=1)
+
+    html_out = sum_df.to_html(float_format='{:20,.1f}'.format,classes='table table-stripped table-hover')
 
     return render_template_string("""
         {% extends "main.html" %}
         {% block content %}
-        {% if current_user.is_authenticated %}
-        Click <em>Data!!!</em> to access your photos.
-        {% else %}
-        Click <em>login in / sign up<em> to access this site.
-        {% endif %}
-        {% endblock %}""")
+            {{data|safe }}
+        {% endblock %}""", data = html_out, page = 'dsreport')
 
 # run the application.
 if __name__ == "__main__":
