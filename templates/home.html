@@ -1,0 +1,36 @@
+{% extends "main.html" %}
+{% block content %}
+{% if current_user.is_authenticated %}
+    <h1>Welcome to DS Finance Dashboard</h1>
+    <div id='chart' class='chart'”></div>
+{% else %}
+    <!-- Header-->
+    {#<header class="bg-dark py-5">#}
+    <header class="py-5 bg-image-full" style="background-image: url('static/landing.jpg')">
+        <div class="container px-5">
+            <div class="row gx-5 justify-content-center">
+                <div class="col-lg-6">
+                    <div class="text-center my-5">
+                        <img class="img-fluid rounded mb-4" src="static/logo.png" alt="..." />
+                        <h1 class="display-5 fw-bolder text-white mb-2">DongSung Green Dashboard <h1>
+                        <p class="lead text-white-50 mb-4">Click <em>login in / sign up<em> to access this site.</p>
+                        <div class="d-grid gap-3 d-sm-flex justify-content-sm-center">
+                            <a class="btn btn-primary btn-lg px-4 me-sm-3" href="{{ url_for('login') }}">Log in</a>
+                            {#<a class="btn btn-outline-light btn-lg px-4" href="#!">Learn More</a>#}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+    
+{% endif %}
+{% endblock %}
+{% block scripts %}
+    <script src='https://cdn.plot.ly/plotly-latest.min.js'></script>
+    <script type='text/javascript'>
+        var graphs = {{plot | safe}};
+        Plotly.plot('chart',graphs,{});
+
+    </script>
+{% endblock %}

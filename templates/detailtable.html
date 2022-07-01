@@ -1,0 +1,96 @@
+{% extends "main.html" %}
+{% block content %}
+    <table border="1" class="table table-hover table-striped" style="width:100%" id="dswork">
+    <thead>
+        <tr style="text-align: left;">
+        <th>연도</th>
+        <th>월</th>
+        <th>일자</th>
+        <th>조직</th>
+        <th>골프장</th>
+        <th>대분류</th>
+        <th>종류</th>
+        <th>품목코드</th>
+        <th>품목명[규격]</th>
+        <th>수량</th>
+        <th>적요</th>
+        <th>방제단가</th>
+        <th>금액(백만원)</th>
+        </tr>
+    </thead>
+    <tfoot>
+        <tr>
+        <th>연도</th>
+        <th>월</th>
+        <th>일자</th>
+        <th>조직</th>
+        <th>골프장</th>
+        <th>대분류</th>
+        <th>종류</th>
+        <th>품목코드</th>
+        <th>품목명[규격]</th>
+        <th>수량</th>
+        <th>적요</th>
+        <th>방제단가</th>
+        <th>금액(백만원)</th>
+        </tr>
+    </tfoot>
+{% endblock %}
+{% block scripts %}
+<script>
+    $(document).ready(function () {
+    $('#dswork').DataTable({
+        initComplete: function () {
+            this.api()
+                .columns()
+                .every(function () {
+                    var column = this;
+                    var select = $('<select><option value=""></option></select>')
+                        .appendTo($(column.footer()).empty())
+                        .on('change', function () {
+                            var val = $.fn.dataTable.util.escapeRegex($(this).val());
+
+                            column.search(val ? '^' + val + '$' : '', true, false).draw();
+                        });
+
+                    column
+                        .data()
+                        .unique()
+                        .sort()
+                        .each(function (d, j) {
+                            select.append('<option value="' + d + '">' + d + '</option>');
+                        });
+                });
+        },
+
+
+        ajax: '/api/data',
+        ordering: true,    
+        "iDisplayLength": 25,
+        columns: [
+
+            { data: '연도' },
+            { data: '월' },
+            { data: '일자' },
+            { data: '조직' },
+            { data: '골프장'},
+            { data: '대분류' },
+            { data: '종류' },
+            { data: '품목코드' },
+            { data: '품목명' },
+            { data: '수량' },
+            { data: '적요' },   
+            { data: '방제단가' },
+            { data: '금액(백만원)'},                           
+        ],
+        });
+        
+
+
+    });
+
+
+
+
+</script>
+{% endblock %}"""
