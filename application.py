@@ -188,60 +188,43 @@ def verify(token, access_token=None):
 def home():
 
     fig = go.Figure()
-    print((current_user.is_authenticated and not work_df.empty))
+    html_out = []
 
-    if current_user.is_authenticated and not work_df.empty:
 
-        # _df = work_df2[((work_df2['연도'] ==2021) & ( ~work_df2['금액(백만원)'].isna()))]
-        _df = work_df[(( ~work_df['금액(백만원)'].isna()))]
+    if current_user.is_authenticated:
+        s3client = boto3.client('s3', 
+                            aws_access_key_id = session['iamaccess'], 
+                            aws_secret_access_key = session['iamsecret'], 
+                            aws_session_token = session['iamtoken']
+                        )
 
-        _df = _df.groupby(['연도','종류']).agg({'금액(백만원)':sum}).reset_index()
-        _df['연도'] = _df['연도'].astype('str')
+        response = s3client.get_object(Bucket='df-fin-data', Key='pickle/MonthlySale2022.pickle')
+        body = response['Body'].read()
+        _df = pickle.loads(body)
 
-        # fig = create_table(_df, height_constant=60)
+        response = s3client.get_object(Bucket='df-fin-data', Key='data_template/MonthlySale2022.html')
+        html_out = response['Body'].read().decode('utf-8')
 
-        x=_df['연도'].unique()
-
-        fig = make_subplots(
-            rows=2, cols=1,
-            shared_xaxes=True,
-            vertical_spacing=0.03,
-            specs=[[{"type": "bar"}],
-                [{"type": "table"}]]
+        fig.update_layout(
+            # template="simple_white",
+            xaxis=dict(title_text="월"),
+            yaxis=dict(title_text="금액"),
+            barmode="stack",
+            template="simple_white"
         )
 
-        y=_df[_df.종류=='제초제']['금액(백만원)']
-        fig.add_trace(go.Bar(x=x, y=y, name='제초제',marker_color='rgb(24, 102, 225)'),row=1, col=1)
-        y=_df[_df.종류=='살균제']['금액(백만원)']
-        fig.add_trace(go.Bar(x=x, y=y, name='살균제',marker_color='rgb(33, 66, 171)'),row=1, col=1)
-        y=_df[_df.종류=='기타약재']['금액(백만원)']
-        fig.add_trace(go.Bar(x=x, y=y, name='기타약재',marker_color='navy'),row=1, col=1)
-
-        
-        fig.update_traces(textposition='auto')
-        fig.update_layout(barmode='stack')
-
-        fig.add_trace(
-            go.Table(
-                header=dict(values=list(_df.columns),
-                    # fill_color='navy',
-                    align='left'),
-                cells=dict(values=[_df.연도, _df.종류,_df['금액(백만원)']],
-                    # fill_color='lavender',
-                    format=["g","",".1f"],
-                    align='right')
-            ),
-            row=2, col=1
-        )
+        colors = [["#000080", "#1866E1"],["#FAE500", "#FFF7A7"]]
 
 
-        fig.update_layout(height=900)
-
-
+        for r, c in zip(_df.구분.unique(), colors):
+            plot_df = _df[_df.구분 == r]
+            fig.add_trace(
+                go.Bar(x=[plot_df.월, plot_df.연도], y=plot_df.Value, name=r, marker_color=c*12),
+            )
     graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
 
     """Homepage route"""
-    return render_template('home.html',  plot=graphJSON)
+    return render_template('home.html',  plot= graphJSON, data = html_out)
 
 @application.route('/api/data')
 @login_required
@@ -275,36 +258,172 @@ def dswork():
 @application.route("/dsw_freqbycourse", methods=('GET', 'POST'))
 @login_required
 def dswork_freqbycourse():
-    # work_df = pd.read_pickle("./df_data/work.pickle") 
+    s3client = boto3.client('s3', 
+                        aws_access_key_id = session['iamaccess'], 
+                        aws_secret_access_key = session['iamsecret'], 
+                        aws_session_token = session['iamtoken']
+                    )
 
-    sum_df1 = work_df.groupby(['조직','거래처명','골프장','연도']).agg({'일자':'nunique'})
-    col = pd.MultiIndex.from_tuples([('일자', 'Total')])
-    sum_df1.columns = col
-    sum_df = work_df.groupby(['조직','거래처명','골프장','연도','월']).agg({'금액(백만원)':sum, '일자':'nunique'}).reindex()
-    sum_df = sum_df.pivot_table(['일자'], ['조직','거래처명','골프장','연도'], '월').fillna(0)
+    response = s3client.get_object(Bucket='df-fin-data', Key='pickle/SaleByProduct2021.pickle')
+    body = response['Body'].read()
+    _df1 = pickle.loads(body)
 
-    sum_df = pd.concat([sum_df, sum_df1] ,axis=1)
+    response = s3client.get_object(Bucket='df-fin-data', Key='pickle/SaleByProduct2022.pickle')
+    body = response['Body'].read()
+    _df2 = pickle.loads(body)
 
-    html_out = sum_df.to_html(float_format='{:20,.1f}'.format,classes='table table-stripped table-hover')
+    response = s3client.get_object(Bucket='df-fin-data', Key='data_template/SaleByProduct2021.html')
+    html_out1 = response['Body'].read().decode('utf-8')
 
-    return render_template('simpletable.html', data = html_out, page = 'dsreport')
+    response = s3client.get_object(Bucket='df-fin-data', Key='data_template/SaleByProduct2022.html')
+    html_out2 = response['Body'].read().decode('utf-8')
+
+
+    fig = make_subplots(
+                rows=1, cols=2,
+                vertical_spacing=0.03,
+                subplot_titles=['2022','2021']
+                
+                # specs=[[{"type": "bar"}],
+                #     [{"type": "bar"}]]
+            )
+    fig.add_trace(go.Bar(
+        y=_df2['품목명'],
+        x=_df2['비용'],
+        name='원가',
+        orientation='h',
+        marker=dict(
+            color='#000080',
+            # line=dict(color='"#000080', width=3)
+        )
+
+    )    ,row=1, col=1)
+    fig.add_trace(go.Bar(
+        y=_df2['품목명'],
+        x=_df2['이익'],
+        name='마진',
+        orientation='h',
+        marker=dict(
+            color='#1866E1',
+            # line=dict(color='"#000080', width=3)
+        )
+
+    )    ,row=1, col=1)
+
+    # fig.update_layout(barmode='stack', height=700)
+
+    fig.add_trace(go.Bar(
+        y=_df1['품목명'],
+        x=_df1['비용'],
+        name='원가',
+        orientation='h',
+        marker=dict(
+            color='#000080',
+            # line=dict(color='"#000080', width=3)
+        )
+
+    )    ,row=1, col=2)
+    fig.add_trace(go.Bar(
+        y=_df1['품목명'],
+        x=_df1['이익'],
+        name='마진',
+        orientation='h',
+        marker=dict(
+            color='#1866E1',
+            # line=dict(color='"#000080', width=3)
+        )
+    )    ,row=1, col=2)
+
+    fig.update_layout(barmode='stack', height=700,     template="simple_white")
+
+    graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+
+    return render_template('twoTable.html',  plot= graphJSON, data1 = html_out1, data2 = html_out2, page = 'dsreport')
 
 @application.route("/dsw_expbycourse", methods=('GET', 'POST'))
 @login_required
 def dswork_expbycourse():
-    # work_df = pd.read_pickle("./df_data/work.pickle") 
+    s3client = boto3.client('s3', 
+                        aws_access_key_id = session['iamaccess'], 
+                        aws_secret_access_key = session['iamsecret'], 
+                        aws_session_token = session['iamtoken']
+                    )
 
-    sum_df1 = work_df.groupby(['조직','거래처명','골프장','연도']).agg({'금액(백만원)':sum})
-    col = pd.MultiIndex.from_tuples([('금액(백만원)', 'Total')])
-    sum_df1.columns = col
-    sum_df = work_df.groupby(['조직','거래처명','골프장','연도','월']).agg({'금액(백만원)':sum, '일자':'nunique'}).reindex()
-    sum_df = sum_df.pivot_table(['금액(백만원)'], ['조직','거래처명','골프장','연도'], '월').fillna(0)
+    response = s3client.get_object(Bucket='df-fin-data', Key='pickle/SaleByClient2021.pickle')
+    body = response['Body'].read()
+    _df1 = pickle.loads(body)
 
-    sum_df = pd.concat([sum_df, sum_df1] ,axis=1)
+    response = s3client.get_object(Bucket='df-fin-data', Key='pickle/SaleByClient2022.pickle')
+    body = response['Body'].read()
+    _df2 = pickle.loads(body)
 
-    html_out = sum_df.to_html(float_format='{:20,.1f}'.format,classes='table table-stripped table-hover')
+    response = s3client.get_object(Bucket='df-fin-data', Key='data_template/SaleByClient2021.html')
+    html_out1 = response['Body'].read().decode('utf-8')
 
-    return render_template('simpletable.html', data = html_out, page = 'dsreport')
+    response = s3client.get_object(Bucket='df-fin-data', Key='data_template/SaleByClient2022.html')
+    html_out2 = response['Body'].read().decode('utf-8')
+
+
+    fig = make_subplots(
+            rows=1, cols=2,
+            vertical_spacing=0.03,
+            subplot_titles=['2022','2021']
+            
+            # specs=[[{"type": "bar"}],
+            #     [{"type": "bar"}]]
+        )
+    fig.add_trace(go.Bar(
+        y=_df2['거래처명'],
+        x=_df2['비용'],
+        name='원가',
+        orientation='h',
+        marker=dict(
+            color='#000080',
+            # line=dict(color='"#000080', width=3)
+        )
+
+    )    ,row=1, col=1)
+    fig.add_trace(go.Bar(
+        y=_df2['거래처명'],
+        x=_df2['이익'],
+        name='마진',
+        orientation='h',
+        marker=dict(
+            color='#1866E1',
+            # line=dict(color='"#000080', width=3)
+        )
+
+    )    ,row=1, col=1)
+
+    # fig.update_layout(barmode='stack', height=700)
+
+    fig.add_trace(go.Bar(
+        y=_df1['거래처명'],
+        x=_df1['비용'],
+        name='원가',
+        orientation='h',
+        marker=dict(
+            color='#000080',
+            # line=dict(color='"#000080', width=3)
+        )
+
+    )    ,row=1, col=2)
+    fig.add_trace(go.Bar(
+        y=_df1['거래처명'],
+        x=_df1['이익'],
+        name='마진',
+        orientation='h',
+        marker=dict(
+            color='#1866E1',
+            # line=dict(color='"#000080', width=3)
+        )
+    )    ,row=1, col=2)
+
+    fig.update_layout(barmode='stack', height=700,     template="simple_white")
+
+    graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+
+    return render_template('twoTable.html',  plot= graphJSON, data1 = html_out1, data2 = html_out2, page = 'dsreport')
 
 # run the application.
 if __name__ == "__main__":

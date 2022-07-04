@@ -1,0 +1,20 @@
+{
+  "name": "ds_sale",
+  "version": "1.0.0",
+  "main": "index.js",
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dsturf1/DS_S3.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/dsturf1/DS_S3/issues"
+  },
+  "homepage": "https://github.com/dsturf1/DS_S3#readme",
+  "description": ""
+}

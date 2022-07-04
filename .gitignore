@@ -2,3 +2,5 @@ __pycache__
 virt
 configlocal.py
 envVars.bat
+df-fin-data
+static\bootstrap-5.0.2-dist
